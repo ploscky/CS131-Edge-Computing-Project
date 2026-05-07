@@ -1,0 +1,6 @@
+ENTRANCE_DEVICE_ID = "entrance-counter-01"
+
+ENTRANCE_UPDATE_SECONDS = 2
+
+FOG_SUB_BIND = "tcp://*:5678"
+FOG_SUB_CONNECT = "tcp://127.0.0.1:5678"
