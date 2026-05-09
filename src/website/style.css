@@ -1,0 +1,51 @@
+body{
+    font-family: Arial, sans-serif;
+    background-color: rgb(120, 152, 255);
+    margin: 0;
+    padding: 20px;
+    text-align: center;
+}
+
+h1{
+    margin-bottom: 10px;
+}
+
+.stats{
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin: 20px 0;
+}
+
+.stats p {
+    background-color: rgb(139, 170, 196);
+    padding: 15px 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.219);
+    font-size: 18px;
+}
+
+#tables {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    max-width: 800px;
+    margin: 0 auto;
+    margin-top: 20px;
+}
+
+#tables div {
+    padding: 15px;
+    border-radius: 10px;
+    color: white;
+    font-weight: bold;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.open {
+    background-color: rgb(120, 168, 152);
+}
+
+.occupied {
+    background-color: rgb(194, 72, 72);
+}

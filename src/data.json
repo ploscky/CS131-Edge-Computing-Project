@@ -1,0 +1,15 @@
+{
+    "inside": 40,
+    "waiting": 6,
+    "seated": 34,
+    "tables": [
+        {"id": 1, "status": "occupied", "capacity": 4},
+        {"id": 2, "status": "occupied", "capacity": 4},
+        {"id": 3, "status": "occupied", "capacity": 6},
+        {"id": 3, "status": "occupied", "capacity": 6},
+        {"id": 3, "status": "occupied", "capacity": 4},
+        {"id": 3, "status": "occupied", "capacity": 6},
+        {"id": 3, "status": "occupied", "capacity": 6},
+        {"id": 3, "status": "open", "capacity": 4}
+    ]
+}
