@@ -4,15 +4,22 @@
     <meta charset="UTF-8">
     <title>Table Tracking Dashboard</title>
     <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 
 <body>
     <h1>Restaurant Dashboard</h1>
 
-    <div class="stats">
-        <p>Inside: <span id="inside">0</span></p>
+    <div class="restaurantInfo">
+        <p>Total Capacity: <span id="totalCapacity">0</span></p>
+        <p>People Inside: <span id="peopleInside">0</span></p>
         <p>Waiting: <span id="waiting">0</span></p>
         <p>Seated: <span id="seated">0</span></p>
+    </div>
+
+    <div class="waitInfo">
+        <p>Estimated Wait: <span id="waitTime">0</span> min</p>
+        <p>Shortest Wait Time: <span id="bestTime"></span></p>
     </div>
 
     <h2>Tables</h2>

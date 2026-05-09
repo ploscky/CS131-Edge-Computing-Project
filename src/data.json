@@ -1,15 +1,22 @@
 {
-    "inside": 40,
+    "totalCapacity": 50,
+    "peopleInside": 40,
     "waiting": 6,
     "seated": 34,
+    "estimatedWaitTime": 30,
+    "bestTime": {
+        "start": "3:00",
+        "end": "5:00",
+        "time": "PM"
+    },
     "tables": [
         {"id": 1, "status": "occupied", "capacity": 4},
         {"id": 2, "status": "occupied", "capacity": 4},
         {"id": 3, "status": "occupied", "capacity": 6},
-        {"id": 3, "status": "occupied", "capacity": 6},
-        {"id": 3, "status": "occupied", "capacity": 4},
-        {"id": 3, "status": "occupied", "capacity": 6},
-        {"id": 3, "status": "occupied", "capacity": 6},
-        {"id": 3, "status": "open", "capacity": 4}
+        {"id": 4, "status": "occupied", "capacity": 6},
+        {"id": 5, "status": "occupied", "capacity": 4},
+        {"id": 6, "status": "occupied", "capacity": 6},
+        {"id": 7, "status": "occupied", "capacity": 6},
+        {"id": 8, "status": "open", "capacity": 4}
     ]
 }

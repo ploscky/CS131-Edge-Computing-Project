@@ -3,9 +3,15 @@ async function loadDashboard() {
         const response = await fetch("/data");
         const data = await response.json();
 
-        document.getElementById("inside").innerText = data.inside;
+        document.getElementById("totalCapacity").innerText = data.totalCapacity;
+        document.getElementById("peopleInside").innerText = data.peopleInside;
         document.getElementById("waiting").innerText = data.waiting;
         document.getElementById("seated").innerText = data.seated;
+        document.getElementById("waitTime").innerText = data.estimatedWaitTime;
+
+        const bestTime = `${data.bestTime.start} - ${data.bestTime.end} ${data.bestTime.time}`;
+        document.getElementById("bestTime").innerText = bestTime;
+        
 
         const tableContainer = document.getElementById("tables");
         tableContainer.innerHTML = "";
