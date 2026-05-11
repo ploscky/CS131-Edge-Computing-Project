@@ -31,10 +31,10 @@ In the fog layer, we implement time limits to different areas within the restaur
 In the cloud, we keep track of how many seats are open and the amount of people entering and leaving over a long period of time. This data is used and analyzed to compute the peak times of the restaurant. The results of this analysis are displayed on a website, helping inform people of the restaurant’s traffic and expected occupancy at any given time.
 
 ## System Design
-<img src="system_design_diagram.jpg" alt="Description" width="800">
+<img src="diagrams/system_design_diagram.jpg" alt="Description" width="800">
 
 ## Workload Distribution
-<img src="workload_distribution_diagram.jpg" alt="Description" width="800">
+<img src="diagrams/workload_distribution_diagram.jpg" alt="Description" width="800">
 
 
 ## Tool Inventory
