@@ -12,6 +12,14 @@ app.get("/data", (req, res) => {
     res.json(JSON.parse(data));
 });
 
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+app.listen(3000, "0.0.0.0", () => {
+    console.log(`Server running on http://localhost:3000`);
 });
+
+//To test on another device run 
+// ipconfig 
+// and find IPv4 Address, then go to http://<IP_ADDRESS>:3000 in your browser
+
+//when demoing
+// get IP adress and make a qr code to join website
+// if it doesnt work on school wifi, use a hotspot and make another qr code to join network first
