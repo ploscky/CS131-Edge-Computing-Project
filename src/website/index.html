@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Table Tracking Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://kit.fontawesome.com/d2d1211c59.js" crossorigin="anonymous"></script>
+</head>
+
+<body>
+    <div class="title">
+        <i class="fa-solid fa-utensils" style="font-size: 40px;color: rgb(227, 65, 24);"></i>
+        <h1>Campus Dining Capacity Tracker</h1>
+    </div>
+
+    <div class="timeInfo">
+        <div class="box">
+            <i class="fa-regular fa-calendar" style="color: rgb(0, 0, 0);"></i>
+            <span id="date" class="value"></span>
+        </div>
+
+        <div class="box">
+            <i class="fa-regular fa-clock" style="color: rgb(0, 0, 0);"></i>
+            <span id="time" class="value"></span>
+        </div>
+
+        <div class="box" id="statusBox">
+            <i class="fa-solid fa-people-line" style="color: rgb(0, 0, 0);"></i>
+            <span class="label">Status: </span>
+            <span id="busyStatus" class="value"></span>
+        </div>
+    </div>
+
+    <div class="restaurantInfo">
+        <p>Total Capacity: <span id="totalCapacity">0</span></p>
+        <p>People Inside: <span id="peopleInside">0</span></p>
+        <p>Waiting: <span id="waiting">0</span></p>
+        <p>Seated: <span id="seated">0</span></p>
+    </div>
+
+    <div class="waitInfo">
+        <p>Estimated Wait: <span id="waitTime">0</span> min</p>
+        <p>Shortest Wait Time: <span id="bestTime"></span></p>
+    </div>
+
+    <h2>Tables</h2>
+    <div id="tables"></div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
