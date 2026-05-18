@@ -38,7 +38,8 @@ In the cloud, we keep track of how many seats are open and the amount of people 
 <img src="diagrams/workload_distribution_diagram.jpg" alt="Description" width="800">
 
 ## Website Draft
-<img width="1276" height="1018" alt="image" src="https://github.com/user-attachments/assets/2b155d15-16ef-48ed-8b4d-876e72e26a5f" />
+<img width="1278" height="1346" alt="image" src="https://github.com/user-attachments/assets/031d2989-c819-4aaf-80e0-ac2931da5f31" />
+
 
 ## Tool Inventory
 | Technology | Purpose |
