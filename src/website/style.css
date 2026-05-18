@@ -2,41 +2,76 @@ body{
     font-family: 'Montserrat', sans-serif;
     background-color: srgb(255, 245, 238);
     margin: 0;
-    padding: 20px;
+    padding: 35px;
     text-align: center;
-    color: white;
+    color: rgb(0, 0, 0);
 }
 
 h1, h2 {
     font-weight: 700;
     color: rgb(68, 34, 28);
-    margin-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+h2 {
+    font-size: 30px;
+}
+
+.title {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    margin-bottom: 30px;
+}
+
+.title h1 {
+    font-size: 40px;
+    margin-left: 10px;
+    margin-top: 10px;
+}
+
+.timeInfo {
+    display: flex;
+    justify-content: center;
+    gap: 0px;
+    margin: 20px 0;
+    color: rgb(0, 0, 0);
+    font-size: 25px;
+    
+}
+
+.box {
+    border: 0.5px solid rgba(0, 0, 0, 0.315);
+    padding: 10px 20px;
+    font-weight: 100;
 }
 
 .restaurantInfo {
     display: flex;
     justify-content: center;
     gap: 30px;
-    margin: 20px 0;
+    margin-top: 40px;
 }
 
 .restaurantInfo p {
-    background-color: rgb(168, 133, 109);
+    background-color: rgb(255, 255, 255);
     padding: 15px 25px;
     border-radius: 10px;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.219);
     font-size: 18px;
+    margin: 0;
 }
 
 .waitInfo {
     display: flex;
     justify-content: center;
     gap: 30px;
-    margin: 20px 0;
+    margin: 5px 0;
 }
 
 .waitInfo p {
-    background-color: rgb(168, 133, 109);
+    background-color: rgb(255, 255, 255);
     padding: 15px 25px;
     border-radius: 10px;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.219);
@@ -66,4 +101,20 @@ h1, h2 {
 
 .occupied {
     background-color: rgb(194, 72, 72);
+}
+
+
+.not-busy {
+    color: rgb(1, 146, 1);
+    font-weight: 600;
+}
+
+.busy {
+    color: rgb(255, 153, 0);
+    font-weight: 600;
+}
+
+.very-busy {
+    color: rgb(218, 0, 0);
+    font-weight: 600;
 }

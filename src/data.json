@@ -4,6 +4,7 @@
     "waiting": 6,
     "seated": 34,
     "estimatedWaitTime": 30,
+    "busyStatus": "busy",
     "bestTime": {
         "start": "3:00",
         "end": "5:00",
