@@ -18,8 +18,14 @@ from config import ENTRANCE_DEVICE_ID, ENTRANCE_UPDATE_SECONDS, FOG_SUB_CONNECT
 model = YOLO("yolov8n.pt") # download yolo model
 cap = cv2.VideoCapture(0) # update later for jetson camera
 
-bound_start = sv.Point(300, 0) # adjust coordinates later for actual doorway
-bound_end = sv.Point(300, 640)
+# test for laptop webcam dimensions
+frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+print(f"Resolution: {frame_width}x{frame_height}")
+
+bound_start = sv.Point(frame_width // 2, 0) # adjust coordinates later for actual doorway
+bound_end = sv.Point(frame_width // 2, frame_height)
 people_counter = sv.LineZone(start=bound_start, end=bound_end) # tracks # of people crossing doorway
 bound_annotator = sv.LineZoneAnnotator()
 box_annotator = sv.BoxAnnotator()
@@ -30,13 +36,6 @@ prev_in = 0
 prev_out = 0
 
 def simulate_entrance_event() -> int:
-    # Temporary stand-in for the camera/person tracking code.
-    # Positive means someone walked in, negative means someone walked out.
-    # return random.choices(
-    #     population=[1, -1, 0],
-    #     weights=[0.35, 0.20, 0.45],
-    #     k=1,
-    # )[0]
     global prev_in, prev_out
 
     ret, frame = cap.read()
@@ -77,27 +76,35 @@ def main():
     time.sleep(1)
 
     total_people_seen = 0
+    delta_sum = 0 # accumulate delta between frame sending
+    last_send_time = time.time() 
 
     print(f"[{ENTRANCE_DEVICE_ID}] sending entrance updates to fog")
 
     while True:
         delta = simulate_entrance_event()
+        delta_sum += delta
 
-        if delta == 1:
+        # only increment total people seen if someone entered
+        if delta > 0:
             total_people_seen += 1
 
-        # Keeping the message as basic JSON for now so it is easy to inspect.
-        message = {
-            "device_id": ENTRANCE_DEVICE_ID,
-            "people_inside_delta": delta,
-            "total_people_seen": total_people_seen,
-            "timestamp": now_iso(),
-        }
+        # send ZMQ messages every 2 seconds
+        if time.time() - last_send_time >= ENTRANCE_UPDATE_SECONDS:
+            # Keeping the message as basic JSON for now so it is easy to inspect.
+            message = {
+                "device_id": ENTRANCE_DEVICE_ID,
+                "people_inside_delta": delta_sum,
+                "total_people_seen": total_people_seen,
+                "timestamp": now_iso(),
+            }
 
-        socket.send_string(f"entrance {json.dumps(message)}")
-        print("[entrance]", message)
+            socket.send_string(f"entrance {json.dumps(message)}")
+            print("[entrance]", message)
+            last_send_time = time.time()
+            delta_sum = 0 # reset after sending frame
 
-        time.sleep(ENTRANCE_UPDATE_SECONDS)
+        #time.sleep(ENTRANCE_UPDATE_SECONDS)
 
 
 if __name__ == "__main__":
