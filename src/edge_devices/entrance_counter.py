@@ -20,7 +20,13 @@ model = YOLO("yolov8n.pt") # download yolo model
 # model.to('cuda')
 # ^^^ 2 lines needs testing on jetson to utilize hardware accelerator instead of cpu
 
-cap = cv2.VideoCapture(0) # update later for jetson camera
+cap = cv2.VideoCapture(0)
+
+# set resolution and framerate for usb webcam
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+cap.set(cv2.CAP_PROP_FPS, 30)
+cap.set(cv2.CAP_PROP_BUFFERSIZE, 1) # get most recent frame
 
 # test for laptop webcam dimensions
 frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -30,6 +36,11 @@ print(f"Resolution: {frame_width}x{frame_height}")
 
 bound_start = sv.Point(frame_width // 2, 0) # adjust coordinates later for actual doorway
 bound_end = sv.Point(frame_width // 2, frame_height)
+
+# adjusted line coords for resized frame (640, 360) -- use this if latency is an issue
+# bound_start = sv.Point(320, 0)
+# bound_end = sv.Point(320, 360)
+
 people_counter = sv.LineZone(start=bound_start, end=bound_end) # tracks # of people crossing doorway
 bound_annotator = sv.LineZoneAnnotator()
 box_annotator = sv.BoxAnnotator()
@@ -39,6 +50,14 @@ tracker = sv.ByteTrack() # make sure a person isn't counted twice w/ ID
 prev_in = 0
 prev_out = 0
 
+# resize frame -- use this if latency is an issue
+# def get_resized_frame():
+#     ret, frame = cap.read()
+#     if not ret:
+#         return None
+#     frame = cv2.resize(frame, (640, 360)) # halve resolution to reduce latency
+#     return frame
+
 def simulate_entrance_event() -> int:
     global prev_in, prev_out
 
@@ -46,6 +65,10 @@ def simulate_entrance_event() -> int:
     if not ret:
         print("Failed frame grab")
         return 0
+    # frame = get_resized_frame()
+    # if frame is None:
+    #     print("Failed frame grab")
+    #     return 0
     
     # use supervision to check trajectory of movement (in or out) 
     results = model(frame, classes=[0])[0] # only detect people
@@ -94,7 +117,7 @@ def main():
 
         # only increment total people seen if someone entered
         if delta > 0:
-            total_people_seen += 1
+            total_people_seen += delta
 
         # send ZMQ messages every 2 seconds
         if time.time() - last_send_time >= ENTRANCE_UPDATE_SECONDS:
