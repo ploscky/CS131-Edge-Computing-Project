@@ -10,6 +10,30 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from config import FOG_SUB_BIND
 
 
+#sets up the format of the json file
+dashboard_state = {
+    "totalCapacity": 50,
+    "peopleInside": 0,
+    "waiting": 0,
+    "seated": 0,
+    "estimatedWaitTime": 0,
+    "busyStatus": "not busy",
+    "tables": [
+        {"id": 1, "status": "occupied"},
+        {"id": 2, "status": "open"}
+    ]
+}
+
+total_Seats = 2  #hardcoded in depending on room
+
+data_file = Path(__file__).resolve().parents[1] / "data.json"
+print(data_file)
+
+def write_dashboard(state: dict):
+    with open(data_file, "w") as f:
+        json.dump(state, f, indent=4)
+
+
 def main():
     context = zmq.Context()
     socket = context.socket(zmq.SUB)
@@ -66,6 +90,25 @@ def main():
                 f"people_waiting={people_waiting}",
                 f"timestamp={data['timestamp']}",
             )
+
+        state = dashboard_state.copy()
+
+        state["peopleInside"] = people_inside
+        state["seated"] = occupied_seats
+        state["waiting"] = max(0, people_waiting)
+
+        # Make a better function for estimated wait time
+        state["estimatedWaitTime"] = state["waiting"] * 5
+
+        # make a better function for how busy it is
+        if state["waiting"] == 0:
+            state["busyStatus"] = "not busy"
+        elif state["waiting"] < 5:
+            state["busyStatus"] = "busy"
+        else:
+            state["busyStatus"] = "very busy"
+
+        write_dashboard(state)
 
 
 if __name__ == "__main__":
