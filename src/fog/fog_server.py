@@ -57,15 +57,15 @@ def main():
             open_seats = TOTAL_SEATS - occupied_seats
             people_waiting = max(0, people_inside - occupied_seats)
 
-        print(
-            "[fog]",
-            f"topic={topic}",
-            f"device={data['device_id']}",
-            f"occupied={occupied_seats}",
-            f"open_seats={open_seats}",
-            f"people_waiting={people_waiting}",
-            f"timestamp={data['timestamp']}",
-        )
+            print(
+                "[fog]",
+                f"topic={topic}",
+                f"device={data['device_id']}",
+                f"occupied={occupied_seats}",
+                f"open_seats={open_seats}",
+                f"people_waiting={people_waiting}",
+                f"timestamp={data['timestamp']}",
+            )
 
 
 if __name__ == "__main__":
