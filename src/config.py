@@ -7,3 +7,5 @@ FOG_SUB_CONNECT = "tcp://127.0.0.1:5678"
 
 SEAT_DEVICE_ID = "seat-counter-01"
 SEAT_UPDATE_SECONDS = 2
+
+LOCATION_ID = "restaurant-01"

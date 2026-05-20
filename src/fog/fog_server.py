@@ -7,7 +7,9 @@ import zmq
 # Lets this file import config.py when it is run from the project folder.
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from config import FOG_SUB_BIND
+from config import FOG_SUB_BIND, LOCATION_ID
+from db_client import insert_wait_time_snapshot
+# from wait_time import estimate_wait_time ---------- uncomment when wait_time.py is merged
 
 
 #sets up the format of the json file
@@ -18,10 +20,18 @@ dashboard_state = {
     "seated": 0,
     "estimatedWaitTime": 0,
     "busyStatus": "not busy",
+    "bestTime": {"start": "", "end": "", "time": ""},
     "tables": [
-        {"id": 1, "status": "occupied"},
-        {"id": 2, "status": "open"}
+        {"id": 1, "status": "open", "capacity": 4},
+        {"id": 2, "status": "open", "capacity": 4},
+        {"id": 3, "status": "open", "capacity": 6},
+        {"id": 4, "status": "open", "capacity": 6},
+        {"id": 5, "status": "open", "capacity": 4},
+        {"id": 6, "status": "open", "capacity": 6},
+        {"id": 7, "status": "open", "capacity": 6},
+        {"id": 8, "status": "open", "capacity": 4},
     ]
+    #adjust later for real layout
 }
 
 total_Seats = 2  #hardcoded in depending on room
@@ -46,6 +56,7 @@ def main():
     # This is the running estimate based on entrance counter messages.
     people_inside = 0
     occupied_seats = 0
+    people_waiting = 0
 
     # potentially make the edge device tell us the total number of seats instead of hardcoding it here
     TOTAL_SEATS = 2
@@ -79,7 +90,7 @@ def main():
         elif topic == "seats":
             occupied_seats = int(data["number of occupied seats"])
             open_seats = TOTAL_SEATS - occupied_seats
-            people_waiting = max(0, people_inside - occupied_seats)
+            people_waiting = max(0, people_inside - occupied_seats) 
 
             print(
                 "[fog]",
@@ -97,8 +108,9 @@ def main():
         state["seated"] = occupied_seats
         state["waiting"] = max(0, people_waiting)
 
-        # Make a better function for estimated wait time
-        state["estimatedWaitTime"] = state["waiting"] * 5
+        # TODO: replace current estimatesWaitTime state with the commented line below when we merge wait_time.py
+        # state["estimatedWaitTime"] = estimate_wait_time(state["waiting"], TOTAL_SEATS)
+        state["estimatedWaitTime"] = state["waiting"] * 5    # delete
 
         # make a better function for how busy it is
         if state["waiting"] == 0:
@@ -110,6 +122,20 @@ def main():
 
         write_dashboard(state)
 
+        # send data to MongoDB
+        try:
+            insert_wait_time_snapshot(
+                location_id=LOCATION_ID,
+                people_inside=people_inside,
+                seated=occupied_seats,
+                waiting=people_waiting,
+                estimated_wait_minutes=state["estimatedWaitTime"],
+                busy_status=state["busyStatus"],
+                timestamp=data.get("timestamp"),
+            )
+        except Exception as e:
+            # write failure shouldn't crash fog server
+            print(f"[fog] WARNING: could not write to MongoDB: {e}")
 
 if __name__ == "__main__":
     main()

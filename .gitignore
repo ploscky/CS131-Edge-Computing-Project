@@ -1,3 +1,8 @@
 node_modules/
 src/test_publisher.py
 src/__pycache__/
+.DS_Store
+.vscode/
+src/.env
+src/edge_devices/yolov8n.pt
+src/fog/__pycache__/
