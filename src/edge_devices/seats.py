@@ -79,6 +79,8 @@ def occupied_seats() -> int:
     # show vid feed and boxes for testing
     cv2.imshow("Video Feed", frame) 
     cv2.waitKey(1) # for vid playback
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        return -999 # returns when q is pressed during stream
     
     return occupied
 
@@ -102,6 +104,9 @@ def main():
     while True:
         occupied = occupied_seats()
 
+        if occupied == -999: 
+            break # exiting on 'q'
+
         # send ZMQ messages every 2 seconds
         if time.time() - last_send_time >= SEAT_UPDATE_SECONDS:
             # Keeping the message as basic JSON for now so it is easy to inspect.
@@ -116,6 +121,10 @@ def main():
             last_send_time = time.time()
 
         #time.sleep(ENTRANCE_UPDATE_SECONDS)
+    
+    # clean up data
+    cap.release()
+    cv2.destroyAllWindows()   
 
 
 if __name__ == "__main__":

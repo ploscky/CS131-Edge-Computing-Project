@@ -16,6 +16,10 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from config import ENTRANCE_DEVICE_ID, ENTRANCE_UPDATE_SECONDS, FOG_SUB_CONNECT
 
 model = YOLO("yolov8n.pt") # download yolo model
+# model.export(format="engine", device = 0)
+# model.to('cuda')
+# ^^^ 2 lines needs testing on jetson to utilize hardware accelerator instead of cpu
+
 cap = cv2.VideoCapture(0)
 
 # set resolution and framerate for usb webcam
@@ -75,8 +79,9 @@ def simulate_entrance_event() -> int:
     # show vid feed and boxes for testing
     frame = box_annotator.annotate(scene=frame, detections=detections)
     bound_annotator.annotate(frame, line_counter=people_counter)
-    cv2.imshow("Video Feed", frame) 
-    cv2.waitKey(1) # for vid playback
+    cv2.imshow("Video Feed", frame)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        return -999 # returns when q is pressed during stream
 
     # compute number of people that entered/exited since last frame grab
     people_in_building = (people_counter.in_count - prev_in) - (people_counter.out_count - prev_out)
@@ -106,6 +111,8 @@ def main():
 
     while True:
         delta = simulate_entrance_event()
+        if delta == -999: 
+            break # exiting on 'q'
         delta_sum += delta
 
         # only increment total people seen if someone entered
@@ -128,6 +135,10 @@ def main():
             delta_sum = 0 # reset after sending frame
 
         #time.sleep(ENTRANCE_UPDATE_SECONDS)
+
+     # clean up data
+    cap.release()
+    cv2.destroyAllWindows()   
 
 
 if __name__ == "__main__":
