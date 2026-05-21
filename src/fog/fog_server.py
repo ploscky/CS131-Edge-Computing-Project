@@ -9,7 +9,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from config import FOG_SUB_BIND, LOCATION_ID
 from db_client import insert_wait_time_snapshot
-# from wait_time import estimate_wait_time ---------- uncomment when wait_time.py is merged
+from wait_time import estimate_wait_time
 
 
 #sets up the format of the json file
@@ -34,8 +34,6 @@ dashboard_state = {
     #adjust later for real layout
 }
 
-total_Seats = 2  #hardcoded in depending on room
-
 data_file = Path(__file__).resolve().parents[1] / "data.json"
 print(data_file)
 
@@ -59,7 +57,8 @@ def main():
     people_waiting = 0
 
     # potentially make the edge device tell us the total number of seats instead of hardcoding it here
-    TOTAL_SEATS = 2
+    # calculate number of seats based on capacity of each table
+    TOTAL_SEATS = sum(t["capacity"] for t in dashboard_state["tables"])
 
     print("[fog] server started")
     print(f"[fog] listening on {FOG_SUB_BIND}")
@@ -67,14 +66,14 @@ def main():
     while True:
         raw_message = socket.recv_string()
 
-        # Messages come in as: "entrance {json data}"
+        # messages come in as: "entrance {json data}"
         topic, payload = raw_message.split(" ", 1)
         data = json.loads(payload)
 
         if topic == "entrance":
             people_inside += int(data["people_inside_delta"])
 
-            # Do not let exits push the count below zero.
+            # do not let exits push the count below zero.
             people_inside = max(0, people_inside)
 
             print(
@@ -107,15 +106,13 @@ def main():
         state["peopleInside"] = people_inside
         state["seated"] = occupied_seats
         state["waiting"] = max(0, people_waiting)
-
-        # TODO: replace current estimatesWaitTime state with the commented line below when we merge wait_time.py
-        # state["estimatedWaitTime"] = estimate_wait_time(state["waiting"], TOTAL_SEATS)
-        state["estimatedWaitTime"] = state["waiting"] * 5    # delete
+        state["estimatedWaitTime"] = estimate_wait_time(state["waiting"], TOTAL_SEATS)
 
         # make a better function for how busy it is
-        if state["waiting"] == 0:
+        # currently using 15 min wait time threshold for "busy"
+        if state["estimatedWaitTime"] == 0:
             state["busyStatus"] = "not busy"
-        elif state["waiting"] < 5:
+        elif state["estimatedWaitTime"] <= 15:
             state["busyStatus"] = "busy"
         else:
             state["busyStatus"] = "very busy"
