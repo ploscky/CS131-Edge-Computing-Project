@@ -6,3 +6,4 @@ pyzmq
 flask
 requests
 python-dotenv
+pymongo
