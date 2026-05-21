@@ -1,0 +1,9 @@
+opencv-python
+numpy
+ultralytics
+supervision
+pyzmq
+flask
+requests
+python-dotenv
+pymongo

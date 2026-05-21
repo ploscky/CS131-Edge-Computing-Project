@@ -1,0 +1,11 @@
+{
+  "name": "campus-dining-capacity-tracker",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node src/web/server.js"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}

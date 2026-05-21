@@ -1,0 +1,9 @@
+node_modules/
+__pycache__/
+*.py[cod]
+src/test_publisher.py
+.DS_Store
+.vscode/
+.env
+src/.env
+src/edge_devices/yolov8n.pt
