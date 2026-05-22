@@ -1,6 +1,5 @@
 """
 Shared MongoDB Atlas connection and helpers.
-Import this in entrance_counter.py, seats.py, and fog_server.py.
 
 Requires:
     pip install pymongo python-dotenv
@@ -11,7 +10,7 @@ Environment variables (set in .env or shell):
 """
 
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta # for time snapshots
 
 from dotenv import load_dotenv
 from pymongo import MongoClient, ASCENDING, DESCENDING
@@ -47,71 +46,12 @@ def get_db():
 def ensure_indexes():
     db = get_db()
 
-    # entrance counter
-    db.entrance_events.create_index([("timestamp", DESCENDING)])
-    db.entrance_events.create_index([("device_id", ASCENDING), ("timestamp", DESCENDING)])
-    db.entrance_events.create_index([("synced_to_bigtable", ASCENDING), ("timestamp", ASCENDING)])
-
-    # occupancy
-    db.occupancy_snapshots.create_index([("timestamp", DESCENDING)])
-    db.occupancy_snapshots.create_index([("device_id", ASCENDING), ("timestamp", DESCENDING)])
-    db.occupancy_snapshots.create_index([("synced_to_bigtable", ASCENDING), ("timestamp", ASCENDING)])
-
-    db.current_state.create_index([("location_id", ASCENDING)], unique=True)
-
-    # wait time snapshots
     db.wait_time_snapshots.create_index([("timestamp", DESCENDING)])
     db.wait_time_snapshots.create_index([("location_id", ASCENDING), ("timestamp", DESCENDING)])
 
     print("[db_client] Indexes ensured")
 
 
-# entrance / exit events
-def insert_entrance_event(
-    device_id: str,
-    people_inside_delta: int,
-    total_people_seen: int,
-    timestamp: str | None = None,
-) -> str:
-    db = get_db()
-    now = datetime.now(timezone.utc)
-    ts = datetime.fromisoformat(timestamp) if timestamp else now
-
-    doc = {
-        "device_id": device_id,
-        "people_inside_delta": people_inside_delta,
-        "total_people_seen": total_people_seen,
-        "timestamp": ts,
-        "synced_to_bigtable": False,
-        "created_at": now,
-    }
-    result = db.entrance_events.insert_one(doc)
-    _update_current_state(device_id=device_id, delta=people_inside_delta)
-    return str(result.inserted_id)
-
-
-
-# table occupancy snapshots
-def insert_occupancy_snapshot(
-    device_id: str,
-    people_seated: int,
-    timestamp: str | None = None,
-) -> str:
-    db = get_db()
-    now = datetime.now(timezone.utc)
-    ts = datetime.fromisoformat(timestamp) if timestamp else now
-
-    doc = {
-        "device_id": device_id,
-        "people_seated": people_seated,
-        "timestamp": ts,
-        "created_at": now,
-    }
-    result = db.occupancy_snapshots.insert_one(doc)
-    return str(result.inserted_id)
-
-
-# wait time snapshots
 def insert_wait_time_snapshot(
     location_id: str,
     people_inside: int,
@@ -155,25 +95,46 @@ def get_recent_wait_times(location_id: str, limit: int = 20) -> list[dict]:
     return results
 
 
-# real-time current state (for frontend)
+def get_best_time(location_id: str) -> dict:
+    # aggregates wait_time_snapshots from past 7 days by hour-of-day
+    # returns the hour with the lowest average waiting count in a dict like 
+    # {"start": "3:00", "end": "4:00", "time": "PM"}
 
-def _update_current_state(device_id: str, delta: int):
     db = get_db()
-    db.current_state.update_one(
-        {"location_id": device_id},
-        {
-            "$inc": {"people_inside": delta},
-            "$set": {"last_updated": datetime.now(timezone.utc)},
-            "$setOnInsert": {"location_id": device_id},
-        },
-        upsert=True,
-    )
 
+    week_ago = datetime.now(timezone.utc) - timedelta(days=7)
 
-def get_current_occupancy(device_id: str) -> dict:
-    db = get_db()
-    doc = db.current_state.find_one({"location_id": device_id})
-    if not doc:
-        return {"location_id": device_id, "people_inside": 0, "last_updated": None}
-    doc.pop("_id", None)
-    return doc
+    # aggregation pipeline for last 7 days
+    pipeline = [
+        {"$match": {
+            "location_id": location_id,
+            "timestamp": {"$gte": week_ago}
+        }},
+        {"$group": {
+            "_id": {"$hour": "$timestamp"},
+            "avg_waiting": {"$avg": "$waiting"} 
+        }},
+        {"$sort": {"avg_waiting": 1}}, # sort by least busy to busiest
+        {"$limit": 1} # take first result (least busy)
+    ]
+
+    result = list(db.wait_time_snapshots.aggregate(pipeline))
+
+    if not result:
+        return {"start": "", "end": "", "time": ""}
+
+    best_hour = result[0]["_id"]
+    next_hour = best_hour + 1
+
+    # format timestamp
+    def format_hour(h: int) -> tuple[str, str]:
+        suffix = "AM" if h < 12 else "PM"
+        display = h if h <= 12 else h - 12
+        if display == 0:
+            display = 12
+        return str(display), suffix
+
+    start_str, time_suffix = format_hour(best_hour)
+    end_str, _ = format_hour(next_hour)
+
+    return {"start": f"{start_str}:00", "end": f"{end_str}:00", "time": time_suffix}
