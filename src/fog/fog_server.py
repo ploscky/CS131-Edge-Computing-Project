@@ -87,7 +87,7 @@ def main():
             )
 
         elif topic == "seats":
-            occupied_seats = int(data["number of occupied seats"])
+            occupied_seats = int(data["number_of_occupied_seats"])
             open_seats = TOTAL_SEATS - occupied_seats
             people_waiting = max(0, people_inside - occupied_seats) 
 
