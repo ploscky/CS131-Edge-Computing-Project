@@ -1,16 +1,15 @@
 import json
 import sys
 from pathlib import Path
-
+import time
 import zmq
 
 # Lets this file import config.py when it is run from the project folder.
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from config import FOG_SUB_BIND, LOCATION_ID
-from db_client import insert_wait_time_snapshot
+from db_client import insert_wait_time_snapshot, get_best_time
 from wait_time import estimate_wait_time
-
 
 #sets up the format of the json file
 dashboard_state = {
@@ -63,6 +62,10 @@ def main():
     print("[fog] server started")
     print(f"[fog] listening on {FOG_SUB_BIND}")
 
+    # track least busy time of day
+    last_best_time_update = 0
+    BEST_TIME_UPDATE_SECONDS = 900  # every 15 minutes
+
     while True:
         raw_message = socket.recv_string()
 
@@ -87,7 +90,7 @@ def main():
             )
 
         elif topic == "seats":
-            occupied_seats = int(data["number of occupied seats"])
+            occupied_seats = int(data["number_of_occupied_seats"])
             open_seats = TOTAL_SEATS - occupied_seats
             people_waiting = max(0, people_inside - occupied_seats) 
 
@@ -118,6 +121,14 @@ def main():
             state["busyStatus"] = "very busy"
 
         write_dashboard(state)
+        
+        # update best time if better hour is found
+        if time.time() - last_best_time_update >= BEST_TIME_UPDATE_SECONDS:
+            try:
+                dashboard_state["bestTime"] = get_best_time(LOCATION_ID)
+                last_best_time_update = time.time()
+            except Exception as e:
+                print(f"[fog] WARNING: could not update best time: {e}")
 
         # send data to MongoDB
         try:
