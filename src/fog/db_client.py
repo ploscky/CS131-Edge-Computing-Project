@@ -179,3 +179,56 @@ def get_current_occupancy(device_id: str) -> dict:
         return {"location_id": device_id, "people_inside": 0, "last_updated": None}
     doc.pop("_id", None)
     return doc
+
+
+def get_peak_hours(location_id: str) -> list[dict]:
+    db = get_db()
+    
+    pipeline = [
+        {"$match": {"location_id": location_id}},
+        {
+            "$project": {
+                "day_of_week": {
+                    "$dayOfWeek": {
+                        "date": "$timestamp", 
+                        "timezone": os.environ.get("TZ", "America/Los_Angeles")
+                    }
+                },
+                "hour": {
+                    "$hour": {
+                        "date": "$timestamp", 
+                        "timezone": os.environ.get("TZ", "America/Los_Angeles")
+                    }
+                },
+                "people_inside": 1
+            }
+        },
+        {
+            "$group": {
+                "_id": {
+                    "day_of_week": "$day_of_week",
+                    "hour": "$hour"
+                },
+                "avg_people": {"$avg": "$people_inside"},
+                "data_points_count": {"$sum": 1}
+            }
+        },
+        {
+            "$sort": {
+                "_id.day_of_week": 1,
+                "_id.hour": 1
+            }
+        },
+        # output layout
+        {
+            "$project": {
+                "_id": 0,
+                "day_of_week": "$_id.day_of_week",
+                "hour": "$_id.hour",
+                "avg_people": {"$round": ["$avg_people", 1]},
+                "sample_size": "$data_points_count"
+            }
+        }
+    ]
+    
+    return list(db.wait_time_snapshots.aggregate(pipeline))
