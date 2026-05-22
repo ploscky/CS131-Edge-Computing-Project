@@ -61,6 +61,11 @@ def ensure_indexes():
     db.wait_time_snapshots.create_index([("timestamp", DESCENDING)])
     db.wait_time_snapshots.create_index([("location_id", ASCENDING), ("timestamp", DESCENDING)])
 
+    # record expiration (for clearing old data over 30d old) 
+    db.entrance_events.create_index("timestamp", expireAfterSeconds=2592000)
+    db.occupancy_snapshots.create_index("timestamp", expireAfterSeconds=2592000)
+    db.wait_time_snapshots.create_index("timestamp", expireAfterSeconds=2592000)
+
     print("[db_client] Indexes ensured")
 
 
