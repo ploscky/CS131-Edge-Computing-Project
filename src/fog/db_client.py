@@ -50,12 +50,10 @@ def ensure_indexes():
     # entrance counter
     db.entrance_events.create_index([("timestamp", DESCENDING)])
     db.entrance_events.create_index([("device_id", ASCENDING), ("timestamp", DESCENDING)])
-    db.entrance_events.create_index([("synced_to_bigtable", ASCENDING), ("timestamp", ASCENDING)])
 
     # occupancy
     db.occupancy_snapshots.create_index([("timestamp", DESCENDING)])
     db.occupancy_snapshots.create_index([("device_id", ASCENDING), ("timestamp", DESCENDING)])
-    db.occupancy_snapshots.create_index([("synced_to_bigtable", ASCENDING), ("timestamp", ASCENDING)])
 
     db.current_state.create_index([("location_id", ASCENDING)], unique=True)
 
@@ -82,7 +80,6 @@ def insert_entrance_event(
         "people_inside_delta": people_inside_delta,
         "total_people_seen": total_people_seen,
         "timestamp": ts,
-        "synced_to_bigtable": False,
         "created_at": now,
     }
     result = db.entrance_events.insert_one(doc)
