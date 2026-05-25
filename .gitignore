@@ -6,3 +6,5 @@ src/__pycache__/
 src/.env
 src/edge_devices/yolov8n.pt
 src/fog/__pycache__/
+data.json
+yolov8n.pt
