@@ -39,7 +39,11 @@ SEAT_ZONES = [
     {
         "id": 3, 
         "polygon": np.array([[650, 400], [850, 400], [850, 600], [650, 600]], dtype=np.int32)
-    }
+    },
+    {
+        "id": 4, 
+        "polygon": np.array([[100, 400], [300, 400], [300, 600], [100, 600]], dtype=np.int32)
+    },
     # add more zones later
 ]
 

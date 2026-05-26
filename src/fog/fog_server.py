@@ -91,6 +91,7 @@ def main():
 
         elif topic == "seats":
             zone_counts = data["zones"]
+            total_seated = 0
 
             for table in dashboard_state["tables"]: 
                 table_id = str(table["id"])
