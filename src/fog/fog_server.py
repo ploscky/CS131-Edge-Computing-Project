@@ -21,14 +21,14 @@ dashboard_state = {
     "busyStatus": "not busy",
     "bestTime": {"start": "", "end": "", "time": ""},
     "tables": [
-        {"id": 1, "status": "open", "capacity": 4},
-        {"id": 2, "status": "open", "capacity": 4},
-        {"id": 3, "status": "open", "capacity": 6},
-        {"id": 4, "status": "open", "capacity": 6},
-        {"id": 5, "status": "open", "capacity": 4},
-        {"id": 6, "status": "open", "capacity": 6},
-        {"id": 7, "status": "open", "capacity": 6},
-        {"id": 8, "status": "open", "capacity": 4},
+        {"id": 1, "status": "open", "capacity": 4, "peopleSitting": 0},
+        {"id": 2, "status": "open", "capacity": 4, "peopleSitting": 0},
+        {"id": 3, "status": "open", "capacity": 6, "peopleSitting": 0},
+        {"id": 4, "status": "open", "capacity": 6, "peopleSitting": 0},
+        {"id": 5, "status": "open", "capacity": 4, "peopleSitting": 0},
+        {"id": 6, "status": "open", "capacity": 6, "peopleSitting": 0},
+        {"id": 7, "status": "open", "capacity": 6, "peopleSitting": 0},
+        {"id": 8, "status": "open", "capacity": 4, "peopleSitting": 0},
     ]
     #adjust later for real layout
 }
@@ -52,7 +52,7 @@ def main():
 
     # This is the running estimate based on entrance counter messages.
     people_inside = 0
-    occupied_seats = 0
+    total_seated = 0
     people_waiting = 0
 
     # potentially make the edge device tell us the total number of seats instead of hardcoding it here
@@ -90,15 +90,28 @@ def main():
             )
 
         elif topic == "seats":
-            occupied_seats = int(data["number_of_occupied_seats"])
-            open_seats = TOTAL_SEATS - occupied_seats
-            people_waiting = max(0, people_inside - occupied_seats) 
+            zone_counts = data["zones"]
+            total_seated = 0
+
+            for table in dashboard_state["tables"]: 
+                table_id = str(table["id"])
+                people = zone_counts.get(table_id, 0)
+                table["peopleSitting"] = people
+                total_seated += people
+
+                if people > 0:
+                    table["status"] = "occupied"
+                else:
+                    table["status"] = "open"
+
+            open_seats = TOTAL_SEATS - total_seated
+            people_waiting = max(0, people_inside - total_seated) 
 
             print(
                 "[fog]",
                 f"topic={topic}",
                 f"device={data['device_id']}",
-                f"occupied={occupied_seats}",
+                f"occupied={total_seated}",
                 f"open_seats={open_seats}",
                 f"people_waiting={people_waiting}",
                 f"timestamp={data['timestamp']}",
@@ -107,7 +120,7 @@ def main():
         state = dashboard_state.copy()
 
         state["peopleInside"] = people_inside
-        state["seated"] = occupied_seats
+        state["seated"] = total_seated
         state["waiting"] = max(0, people_waiting)
         state["estimatedWaitTime"] = estimate_wait_time(state["waiting"], TOTAL_SEATS)
 
@@ -135,7 +148,7 @@ def main():
             insert_wait_time_snapshot(
                 location_id=LOCATION_ID,
                 people_inside=people_inside,
-                seated=occupied_seats,
+                seated=total_seated,
                 waiting=people_waiting,
                 estimated_wait_minutes=state["estimatedWaitTime"],
                 busy_status=state["busyStatus"],
