@@ -96,14 +96,16 @@ def simulate_entrance_event() -> int:
     # show vid feed and boxes for testing
     frame = box_annotator.annotate(scene=frame, detections=detections)
     bound_annotator.annotate(frame, line_counter=people_counter)
+
     try:
         ffmpeg_process.stdin.write(frame.tobytes())
     except Exception as e:
         print(f"Streaming error: {e}")
+        return -999
 
     #cv2.imshow("Video Feed", frame)
     #if cv2.waitKey(1) & 0xFF == ord('q'):
-        return -999 # returns when q is pressed during stream
+    #    return -999 # returns when q is pressed during stream
 
     # compute number of people that entered/exited since last frame grab
     people_in_building = (people_counter.in_count - prev_in) - (people_counter.out_count - prev_out)
@@ -119,46 +121,51 @@ def main():
     context = zmq.Context()
     socket = context.socket(zmq.PUB)
 
-    ffmpeg_process = start_ffmpeg_pipe(frame_width, frame_height)
 
     # This edge device publishes updates to the local fog server.
     socket.connect(FOG_SUB_CONNECT)
 
+    ffmpeg_process = start_ffmpeg_pipe(frame_width, frame_height)
+
     # Give PUB/SUB a moment to connect.
     time.sleep(1)
 
+    
     total_people_seen = 0
     delta_sum = 0 # accumulate delta between frame sending
     last_send_time = time.time() 
 
     print(f"[{ENTRANCE_DEVICE_ID}] sending entrance updates to fog")
 
-    while True:
-        delta = simulate_entrance_event(ffmpeg_process)
-        if delta == -999: 
-            break # exiting on 'q'
-        delta_sum += delta
+    try:
+        while True:
+            delta = simulate_entrance_event(ffmpeg_process)
+            if delta == -999: 
+                break # exiting on 'q'
+            delta_sum += delta
 
-        # only increment total people seen if someone entered
-        if delta > 0:
-            total_people_seen += delta
+            # only increment total people seen if someone entered
+            if delta > 0:
+                total_people_seen += delta
 
-        # send ZMQ messages every 2 seconds
-        if time.time() - last_send_time >= ENTRANCE_UPDATE_SECONDS:
-            # Keeping the message as basic JSON for now so it is easy to inspect.
-            message = {
-                "device_id": ENTRANCE_DEVICE_ID,
-                "people_inside_delta": delta_sum,
-                "total_people_seen": total_people_seen,
-                "timestamp": now_iso(),
-            }
+            # send ZMQ messages every 2 seconds
+            if time.time() - last_send_time >= ENTRANCE_UPDATE_SECONDS:
+                # Keeping the message as basic JSON for now so it is easy to inspect.
+                message = {
+                    "device_id": ENTRANCE_DEVICE_ID,
+                    "people_inside_delta": delta_sum,
+                    "total_people_seen": total_people_seen,
+                    "timestamp": now_iso(),
+                }
 
-            socket.send_string(f"entrance {json.dumps(message)}")
-            print("[entrance]", message)
-            last_send_time = time.time()
-            delta_sum = 0 # reset after sending frame
+                socket.send_string(f"entrance {json.dumps(message)}")
+                print("[entrance]", message)
+                last_send_time = time.time()
+                delta_sum = 0 # reset after sending frame
 
-        #time.sleep(ENTRANCE_UPDATE_SECONDS)
+            #time.sleep(ENTRANCE_UPDATE_SECONDS)
+    except KeyboardInterrupt:
+        print("Shutting down...")
 
      # clean up data
     cap.release()
