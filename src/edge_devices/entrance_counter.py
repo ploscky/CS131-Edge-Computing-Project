@@ -73,12 +73,19 @@ def simulate_entrance_event() -> int:
     # use supervision to check trajectory of movement (in or out) 
     results = model(frame, classes=[0])[0] # only detect people
     detections = sv.Detections.from_ultralytics(results)
+
+    if detections.confidence is not None and len(detections.confidence) > 0:
+        confidence_text = f"Confidence: {max(detections.confidence):.2f}"
+    else:
+        confidence_text = "Confidence: --"
+
     detections = tracker.update_with_detections(detections)
     people_counter.trigger(detections=detections)
     
     # show vid feed and boxes for testing
     frame = box_annotator.annotate(scene=frame, detections=detections)
     bound_annotator.annotate(frame, line_counter=people_counter)
+    cv2.putText(frame, confidence_text, (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
     cv2.imshow("Video Feed", frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         return -999 # returns when q is pressed during stream
