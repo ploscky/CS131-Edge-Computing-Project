@@ -5,6 +5,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 import cv2
+import subprocess
 from ultralytics import YOLO
 import supervision as sv
 
@@ -58,6 +59,22 @@ prev_out = 0
 #     frame = cv2.resize(frame, (640, 360)) # halve resolution to reduce latency
 #     return frame
 
+def start_ffmpeg_pipe(width, height, fps=30):
+    command = [
+        'ffmpeg',
+        '-y',
+        '-f', 'rawvideo',
+        '-vcodec', 'rawvideo',
+        '-pix_fmt', 'bgr24', # OpenCV uses BGR
+        '-s', f"{width}x{height}",
+        '-r', str(fps),
+        '-i', '-', # Read from stdin
+        '-f', 'mjpeg',
+        '-listen', '1',
+        'http://0.0.0.0:8080'
+    ]
+    return subprocess.Popen(command, stdin=subprocess.PIPE)
+
 def simulate_entrance_event() -> int:
     global prev_in, prev_out
 
@@ -79,8 +96,13 @@ def simulate_entrance_event() -> int:
     # show vid feed and boxes for testing
     frame = box_annotator.annotate(scene=frame, detections=detections)
     bound_annotator.annotate(frame, line_counter=people_counter)
-    cv2.imshow("Video Feed", frame)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    try:
+        ffmpeg_process.stdin.write(frame.tobytes())
+    except Exception as e:
+        print(f"Streaming error: {e}")
+
+    #cv2.imshow("Video Feed", frame)
+    #if cv2.waitKey(1) & 0xFF == ord('q'):
         return -999 # returns when q is pressed during stream
 
     # compute number of people that entered/exited since last frame grab
@@ -97,6 +119,8 @@ def main():
     context = zmq.Context()
     socket = context.socket(zmq.PUB)
 
+    ffmpeg_process = start_ffmpeg_pipe(frame_width, frame_height)
+
     # This edge device publishes updates to the local fog server.
     socket.connect(FOG_SUB_CONNECT)
 
@@ -110,7 +134,7 @@ def main():
     print(f"[{ENTRANCE_DEVICE_ID}] sending entrance updates to fog")
 
     while True:
-        delta = simulate_entrance_event()
+        delta = simulate_entrance_event(ffmpeg_process)
         if delta == -999: 
             break # exiting on 'q'
         delta_sum += delta
@@ -138,7 +162,9 @@ def main():
 
      # clean up data
     cap.release()
-    cv2.destroyAllWindows()   
+    cv2.destroyAllWindows()
+    ffmpeg_process.stdin.close()
+    ffmpeg_process.wait()   
 
 
 if __name__ == "__main__":
