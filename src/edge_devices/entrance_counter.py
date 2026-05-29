@@ -75,7 +75,7 @@ def start_ffmpeg_pipe(width, height, fps=30):
     ]
     return subprocess.Popen(command, stdin=subprocess.PIPE)
 
-def simulate_entrance_event() -> int:
+def simulate_entrance_event(ffmpeg_process) -> int:
     global prev_in, prev_out
 
     ret, frame = cap.read()
