@@ -16,6 +16,10 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from config import SEAT_DEVICE_ID, SEAT_UPDATE_SECONDS, FOG_SUB_CONNECT
 
+PERSON_CONFIDENCE_THRESHOLD = 0.5
+MIN_ZONE_OVERLAP_RATIO = 0.12
+MIN_PERSON_OVERLAP_RATIO = 0.08
+
 model = YOLO("yolov8n.pt") # download yolo model
 cap = cv2.VideoCapture(0) # update later for jetson camera
 
@@ -30,20 +34,13 @@ cap.set(cv2.CAP_PROP_BUFFERSIZE, 1) # get most recent frame
 SEAT_ZONES = [
     {
         "id": 1,
-        "polygon": np.array([[100, 100], [300, 100], [300, 300], [100, 300]], dtype=np.int32) 
+        "polygon": np.array([[100, 16], [420, 16], [420, 300], [100, 300]], dtype=np.int32) 
     },
     {
         "id": 2, 
-        "polygon": np.array([[350, 100], [550, 100], [550, 300], [350, 300]], dtype=np.int32)
+        "polygon": np.array([[550, 100], [870, 16], [870, 300], [530, 300]], dtype=np.int32)
     },
-    {
-        "id": 3, 
-        "polygon": np.array([[650, 400], [850, 400], [850, 600], [650, 600]], dtype=np.int32)
-    },
-    {
-        "id": 4, 
-        "polygon": np.array([[100, 400], [300, 400], [300, 600], [100, 600]], dtype=np.int32)
-    },
+    
     # add more zones later
 ]
 
@@ -65,6 +62,30 @@ zone_annotators = [sv.PolygonZoneAnnotator(zone=sv.PolygonZone(polygon=zone["pol
 #     frame = cv2.resize(frame, (640, 360)) # halve resolution to reduce latency
 #     return frame
 
+def box_zone_overlap_area(xyxy, zone_polygon) -> float:
+    x1, y1, x2, y2 = xyxy
+    body_box = np.array(
+        [[x1, y1], [x2, y1], [x2, y2], [x1, y2]],
+        dtype=np.float32,
+    )
+    zone_polygon = zone_polygon.astype(np.float32)
+
+    intersection_area, _ = cv2.intersectConvexConvex(body_box, zone_polygon)
+    return intersection_area
+
+def box_area(xyxy) -> float:
+    x1, y1, x2, y2 = xyxy
+    return max(0, x2 - x1) * max(0, y2 - y1)
+
+def zone_area(zone_polygon) -> float:
+    return cv2.contourArea(zone_polygon.astype(np.float32))
+
+def overlaps_enough_to_count(xyxy, zone_polygon, overlap_area) -> bool:
+    return (
+        overlap_area >= zone_area(zone_polygon) * MIN_ZONE_OVERLAP_RATIO
+        and overlap_area >= box_area(xyxy) * MIN_PERSON_OVERLAP_RATIO
+    )
+
 def occupied_seats() -> int:
     ret, frame = cap.read()
     if not ret:
@@ -75,33 +96,41 @@ def occupied_seats() -> int:
     #     print("Failed frame grab")
     #     return 0
     
-    results = model(frame, classes=[0])[0] # only detect people
+    results = model(frame, classes=[0], conf=PERSON_CONFIDENCE_THRESHOLD)[0] # only detect people
     detections = sv.Detections.from_ultralytics(results)
 
-    zone_counts = {}
+    zone_counts = {zone["id"]: 0 for zone in SEAT_ZONES}
 
-    #Counts how many people are in each zone
     for zone, zone_annotator in zip(SEAT_ZONES, zone_annotators):
         frame = zone_annotator.annotate(scene=frame)
 
-        people_in_zone = 0
-        for xyxy in detections.xyxy:
-            x1, y1, x2, y2 = xyxy
+    # Count each detected person in only one seat zone.
+    for xyxy in detections.xyxy:
+        x1, y1, x2, y2 = xyxy
 
-            cx = int((x1+x2) / 2)
-            cy = int((y1+y2) / 2)
+        cx = int((x1+x2) / 2)
+        cy = int((y1+y2) / 2)
 
-            result = cv2.pointPolygonTest(zone["polygon"], (cx,cy), False)
+        best_zone_id = None
+        best_overlap_area = 0
 
-            if result >= 0:
-                cv2.circle(frame, (cx, cy), 8, (0,255,0), -1)
+        for zone in SEAT_ZONES:
+            overlap_area = box_zone_overlap_area(xyxy, zone["polygon"])
+            if (
+                overlaps_enough_to_count(xyxy, zone["polygon"], overlap_area)
+                and overlap_area > best_overlap_area
+            ):
+                best_overlap_area = overlap_area
+                best_zone_id = zone["id"]
 
-            else:
-                cv2.circle(frame, (cx, cy), 6, (0, 0, 255), -1)
+        if best_zone_id is not None:
+            zone_counts[best_zone_id] += 1
+            cv2.circle(frame, (cx, cy), 8, (0,255,0), -1)
+        else:
+            cv2.circle(frame, (cx, cy), 6, (0, 0, 255), -1)
 
-            if result >= 0:
-                people_in_zone += 1
-        zone_counts[zone["id"]] = people_in_zone
+    for zone in SEAT_ZONES:
+        people_in_zone = zone_counts[zone["id"]]
 
         label_x = zone["polygon"][0][0]
         label_y = zone["polygon"][0][1] - 10
