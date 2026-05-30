@@ -47,6 +47,21 @@
     <h2>Tables</h2>
     <div id="tables"></div>
 
+    <!-- peak hours chart from MongoDB Atlas -->
+    <div id="chart-section">
+        <h2>Peak Hours</h2>
+        <div class="day-filters">
+            <button class="day-btn active" data-day="Monday">Mon</button>
+            <button class="day-btn" data-day="Tuesday">Tue</button>
+            <button class="day-btn" data-day="Wednesday">Wed</button>
+            <button class="day-btn" data-day="Thursday">Thu</button>
+            <button class="day-btn" data-day="Friday">Fri</button>
+            <button class="day-btn" data-day="Saturday">Sat</button>
+        </div>
+        <div id="occupancy-chart"></div>
+    </div>
+
+    <script src="https://unpkg.com/@mongodb-js/charts-embed-dom"></script>
     <script src="script.js"></script>
 </body>
 

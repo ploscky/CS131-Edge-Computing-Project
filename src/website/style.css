@@ -20,7 +20,7 @@ h2 {
 .title {
     display: flex;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: center;
     gap: 10px;
     margin-bottom: 30px;
 }
@@ -117,4 +117,56 @@ h2 {
 .very-busy {
     color: rgb(218, 0, 0);
     font-weight: 600;
+}
+
+/* Data Visualization styling */
+
+#occupancy-chart {
+  width: 70%;
+  height: auto;
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 1rem 0;
+  position: relative;
+  justify-self: center;
+}
+
+.day-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  justify-self: center;
+}
+
+.day-btn {
+  padding: 6px 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.day-btn.active {
+  background: #f0ba84;
+  color: white;
+  border-color: transparent;
+}
+
+.day-btn:hover:not(.active) {
+  background: #f0f0f0;
+}
+
+/* hide mongoDB logos and errors at the bottom of the embedded chart */
+#occupancy-chart::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 52px; /* adjust if the bar is taller/shorter */
+    background: white; /* match your page background color */
+    z-index: 10;
+    pointer-events: none;
 }
