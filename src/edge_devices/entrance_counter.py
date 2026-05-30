@@ -15,10 +15,15 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from config import ENTRANCE_DEVICE_ID, ENTRANCE_UPDATE_SECONDS, FOG_SUB_CONNECT
 
-model = YOLO("yolov8n.pt") # download yolo model
-# model.export(format="engine", device = 0)
-# model.to('cuda')
-# ^^^ 2 lines needs testing on jetson to utilize hardware accelerator instead of cpu
+MODEL_SIZE = 320
+TENSORRT_MODEL = Path("yolov8n.engine")
+PYTORCH_MODEL = Path("yolov8n.pt")
+
+# On the Jetson Nano, export once with:
+# yolo export model=yolov8n.pt format=engine imgsz=320 half=True device=0
+model_path = TENSORRT_MODEL if TENSORRT_MODEL.exists() else PYTORCH_MODEL
+print(f"Loading YOLO model: {model_path}")
+model = YOLO(str(model_path))
 
 cap = cv2.VideoCapture(0)
 
@@ -71,7 +76,7 @@ def simulate_entrance_event() -> int:
     #     return 0
     
     # use supervision to check trajectory of movement (in or out) 
-    results = model(frame, classes=[0])[0] # only detect people
+    results = model(frame, classes=[0], imgsz=MODEL_SIZE)[0] # only detect people
     detections = sv.Detections.from_ultralytics(results)
 
     if detections.confidence is not None and len(detections.confidence) > 0:
