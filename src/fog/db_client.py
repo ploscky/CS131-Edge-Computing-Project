@@ -32,7 +32,7 @@ def get_client() -> MongoClient:
         _client = MongoClient(uri, serverSelectionTimeoutMS=5000)
         try:
             _client.admin.command("ping")
-            print("[db_client] Connected to MongoDB Atlas ✓")
+            print("[db_client] Connected to MongoDB Atlas")
         except ConnectionFailure as e:
             raise RuntimeError(f"[db_client] Could not connect to MongoDB: {e}") from e
     return _client
@@ -46,8 +46,11 @@ def get_db():
 def ensure_indexes():
     db = get_db()
 
-    db.wait_time_snapshots.create_index([("timestamp", DESCENDING)])
-    db.wait_time_snapshots.create_index([("location_id", ASCENDING), ("timestamp", DESCENDING)])
+    db.seat_updates.create_index([("timestamp", DESCENDING)])
+    db.seat_updates.create_index([("location_id", ASCENDING), ("timestamp", DESCENDING)])
+
+    db.seat_updates.create_index([("timestamp", DESCENDING)])
+    db.seat_updates.create_index([("location_id", ASCENDING), ("timestamp", DESCENDING)])
 
     print("[db_client] Indexes ensured")
 
@@ -74,14 +77,14 @@ def insert_wait_time_snapshot(
         "timestamp": ts,
         "created_at": now,
     }
-    result = db.wait_time_snapshots.insert_one(doc)
+    result = db.seat_updates.insert_one(doc)
     return str(result.inserted_id)
 
 
 def get_recent_wait_times(location_id: str, limit: int = 20) -> list[dict]:
     db = get_db()
     cursor = (
-        db.wait_time_snapshots
+        db.seat_updates
         .find({"location_id": location_id}, {"_id": 0})
         .sort("timestamp", DESCENDING)
         .limit(limit)
@@ -94,31 +97,40 @@ def get_recent_wait_times(location_id: str, limit: int = 20) -> list[dict]:
         results.append(doc)
     return results
 
-
 def get_best_time(location_id: str) -> dict:
-    # aggregates wait_time_snapshots from past 7 days by hour-of-day
-    # returns the hour with the lowest average waiting count in a dict like 
-    # {"start": "3:00", "end": "4:00", "time": "PM"}
-
     db = get_db()
-
     week_ago = datetime.now(timezone.utc) - timedelta(days=7)
 
-    # aggregation pipeline for last 7 days
+    # MongoDB $dayOfWeek: 1=Sun, 2=Mon, 3=Tue, 4=Wed, 5=Thu, 6=Fri, 7=Sat
+    # Opening hours per day: [open_hour, close_hour]
+    open_windows = [
+        {"$and": [{"$eq": [{"$dayOfWeek": "$timestamp"}, 2]}, {"$gte": [{"$hour": "$timestamp"}, 8]}, {"$lte": [{"$hour": "$timestamp"}, 21]}]},  # Mon
+        {"$and": [{"$eq": [{"$dayOfWeek": "$timestamp"}, 3]}, {"$gte": [{"$hour": "$timestamp"}, 8]}, {"$lte": [{"$hour": "$timestamp"}, 21]}]},  # Tue
+        {"$and": [{"$eq": [{"$dayOfWeek": "$timestamp"}, 4]}, {"$gte": [{"$hour": "$timestamp"}, 8]}, {"$lte": [{"$hour": "$timestamp"}, 21]}]},  # Wed
+        {"$and": [{"$eq": [{"$dayOfWeek": "$timestamp"}, 5]}, {"$gte": [{"$hour": "$timestamp"}, 8]}, {"$lte": [{"$hour": "$timestamp"}, 21]}]},  # Thu
+        {"$and": [{"$eq": [{"$dayOfWeek": "$timestamp"}, 6]}, {"$gte": [{"$hour": "$timestamp"}, 8]}, {"$lte": [{"$hour": "$timestamp"}, 20]}]},  # Fri
+        {"$and": [{"$eq": [{"$dayOfWeek": "$timestamp"}, 7]}, {"$gte": [{"$hour": "$timestamp"}, 11]}, {"$lte": [{"$hour": "$timestamp"}, 16]}]}, # Sat
+    ]
+
     pipeline = [
         {"$match": {
             "location_id": location_id,
-            "timestamp": {"$gte": week_ago}
+            "timestamp": {"$gte": week_ago},
+            "seated": {"$gt": 0},
+        }},
+        {"$match": {
+            "$expr": {"$or": open_windows}
         }},
         {"$group": {
             "_id": {"$hour": "$timestamp"},
-            "avg_waiting": {"$avg": "$waiting"} 
+            "avg_seated": {"$avg": "$seated"},
+            "avg_waiting": {"$avg": "$waiting"},
         }},
-        {"$sort": {"avg_waiting": 1}}, # sort by least busy to busiest
-        {"$limit": 1} # take first result (least busy)
+        {"$sort": {"avg_seated": 1}},
+        {"$limit": 1}
     ]
 
-    result = list(db.wait_time_snapshots.aggregate(pipeline))
+    result = list(db.seat_updates.aggregate(pipeline))
 
     if not result:
         return {"start": "", "end": "", "time": ""}
@@ -126,7 +138,6 @@ def get_best_time(location_id: str) -> dict:
     best_hour = result[0]["_id"]
     next_hour = best_hour + 1
 
-    # format timestamp
     def format_hour(h: int) -> tuple[str, str]:
         suffix = "AM" if h < 12 else "PM"
         display = h if h <= 12 else h - 12
@@ -138,3 +149,5 @@ def get_best_time(location_id: str) -> dict:
     end_str, _ = format_hour(next_hour)
 
     return {"start": f"{start_str}:00", "end": f"{end_str}:00", "time": time_suffix}
+    # aggregates seat_updates from past 7 days by hour-of-day
+    # returns the hour with the lowest average waiting count
